@@ -33,7 +33,7 @@ city_frame = pd.read_excel("cities.xlsx")
 cities = city_frame["City"].tolist()
 
 # Мой api ключ и адрес обращения
-api = "9e36367c58e9665759a2a78b30140f09"
+api = 
 url = 'http://api.openweathermap.org/data/2.5/weather'
 
 

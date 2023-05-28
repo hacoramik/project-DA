@@ -6,11 +6,6 @@ import time
 import pandas as pd
 import tensorflow as tf
 import numpy as np
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
-from sklearn.model_selection import train_test_split
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense
-import matplotlib.pyplot as plt
 
 # Установка соединения с базой данных
 conn = sqlite3.connect('example.db')
@@ -38,48 +33,8 @@ city_frame = pd.read_excel("cities.xlsx")
 cities = city_frame["City"].tolist()
 
 # Мой api ключ и адрес обращения
-api =
+api = "9e36367c58e9665759a2a78b30140f09"
 url = 'http://api.openweathermap.org/data/2.5/weather'
-
-print('you are here')
-
-
-def show_res():
-    # загрузка данных
-    data = pd.read_excel('weather_data.xlsx')
-
-    # изменение преобразования данных
-    X = data[['temperature', 'humidity', 'pressure', 'wind_speed', 'wind_direction']]
-    y = data['temperature_max']
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
-
-    # изменение создания модели
-    model = Sequential()
-    model.add(Dense(64, activation='relu', input_dim=X_train.shape[1]))
-    model.add(Dense(1, activation='linear'))
-    model.compile(optimizer='adam', loss='mse', metrics=['mae'])
-
-    # предсказание значений для тестовой выборки
-    predictions = model.predict(X_test)
-
-    # создание графиков
-    fig, axs = plt.subplots(2, 2)
-
-    axs[0, 0].scatter(X_test['temperature'], y_test, label='Измеренная')
-    axs[0, 0].scatter(X_test['temperature'], predictions[:, 0], label='Предсказанная')
-    axs[0, 0].set_title('Максимальная температура')
-    axs[0, 0].legend()
-
-    axs[0, 1].scatter(X_test['humidity'], y_test)
-    axs[0, 1].set_title('Влажность')
-
-    axs[1, 0].scatter(X_test['pressure'], y_test)
-    axs[1, 0].set_title('Давление')
-
-    axs[1, 1].scatter(X_test['wind_speed'], y_test)
-    axs[1, 1].set_title('Скорость ветра')
-
-    plt.show()
 
 
 def update_weather_data():
@@ -114,8 +69,6 @@ def update_weather_data():
             conn.commit()
             print("Weather data updated successfully for ", city)
             print(data)
-            show_res()
-
         else:
             print("Error: invalid response from server")
 
@@ -139,10 +92,13 @@ def create_excel_file():
 
 
 # Создание заданий для выполнения каждую минуту
-schedule.every(10).seconds.do(update_weather_data)
-schedule.every(10).seconds.do(create_excel_file)
+schedule.every(5).seconds.do(update_weather_data)
+schedule.every(5).seconds.do(create_excel_file)
 
 # Бесконечный цикл для выполнения заданий
 while True:
     schedule.run_pending()
     time.sleep(1)
+
+# Закрытие соединения с базой данных
+conn.close()
