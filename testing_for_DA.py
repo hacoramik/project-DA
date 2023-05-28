@@ -92,13 +92,24 @@ def create_excel_file():
 
 
 # Создание заданий для выполнения каждую минуту
-schedule.every(5).seconds.do(update_weather_data)
-schedule.every(5).seconds.do(create_excel_file)
+schedule.every(1).minutes.do(update_weather_data)
+schedule.every(1).minutes.do(create_excel_file)
 
 # Бесконечный цикл для выполнения заданий
 while True:
     schedule.run_pending()
     time.sleep(1)
 
+
+# Подключение к базе данных
+conn = sqlite3.connect("example.db")
+
+# Запрос данных из таблицы weather
+df = pd.read_sql_query("SELECT * from  weather", conn)
+print(df)
+# Подготовка данных для обучения
+X = df[["city", "year", "temperature", "temperature_min", "temperature_max", "humidity", "pressure", "wind_speed", "wind_direction",]]
+y = df["description"]
+print(X, y)
 # Закрытие соединения с базой данных
 conn.close()
