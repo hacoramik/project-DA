@@ -1,165 +1,101 @@
-import requests
-import json
-import sqlite3
-import schedule
-import time
 import pandas as pd
-import tensorflow as tf
-import numpy as np
+import datetime
 from sklearn.model_selection import train_test_split
-from keras.models import Sequential
-from keras.layers import Dense
-import matplotlib.pyplot as plt
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.models import load_model
+import plotly.graph_objs as go
 
-# Установка соединения с базой данных
-conn = sqlite3.connect('example.db')
-
-# Создание объекта курсора
-c = conn.cursor()
-
-# Создание таблицы
-c.execute('''CREATE TABLE IF NOT EXISTS weather (city TEXT,
-            year INTEGER,
-            time TEXT,
-            temperature FLOAT,
-            temperature_min FLOAT,
-            temperature_max FLOAT,
-            humidity FLOAT,
-            pressure FLOAT,
-            wind_speed FLOAT,
-            wind_direction FLOAT,
-            description TEXT)''')
-
-# Чтение Excel файла
-city_frame = pd.read_excel("cities.xlsx")
-
-# Получение списка городов из столбца в DataFrame
-cities = city_frame["City"].tolist()
-
-# Мой api ключ и адрес обращения
-api = "{your_api}"
-url = 'http://api.openweathermap.org/data/2.5/weather'
+# Функция для изменения значений
+def convert_to_float(x):
+    try:
+        return float(x)
+    except ValueError:
+        return 0
 
 
-def check_II():
+# Функция для обработки данных для обучения модели
+def prepare_data(file_name):
+    df = pd.read_excel(file_name)
 
-    print('you are here')
-    # загрузка данных
-    data = pd.read_excel('weather_data.xlsx')
+    df = df.drop(columns=['Часы', 'Минуты', 'Po', 'Pa', 'U'])
+    df = df.fillna(method="ffill")
+    df["Дата"] = pd.to_datetime(df["Дата"], format="%d.%m.%Y")
 
-    # изменение преобразования данных
-    X = data[['temperature', 'humidity', 'pressure', 'wind_speed', 'wind_direction']]
-    y = data['temperature_max']
+    le = LabelEncoder()
+    df["Дата"] = le.fit_transform(df["Дата"])
+
+    df["RRR"] = df["RRR"].apply(convert_to_float)
+
+    X = df.drop(columns=['T'])
+    y = df['T']
+
+    sc = StandardScaler()
+    X = sc.fit_transform(X)
+
+    return X, y, le, sc
+
+
+# Функция для обучения модели и сохранения ее в файл
+def train_model(X, y):
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
-    # изменение создания модели
     model = Sequential()
-    model.add(Dense(64, activation='relu', input_dim=X_train.shape[1]))
-    model.add(Dense(1, activation='linear'))
-    model.compile(optimizer='adam', loss='mse', metrics=['mae'])
+    model.add(Dense(units=64, activation="relu", input_dim=X_train.shape[1]))
+    model.add(Dense(units=1, activation="linear"))
 
-    # обучение модели
-    history = model.fit(X_train, y_train, epochs=100, batch_size=32, verbose=0, validation_split=0.2)
+    model.compile(optimizer="adam", loss="mean_squared_error")
+    model.fit(X_train, y_train, epochs=100, batch_size=32, verbose=1)
 
-    # предсказание значений для тестовой выборки
-    predictions = model.predict(X_test)
+    model.save("weather_model.h5")
 
-    # создание графиков
-    fig, axs = plt.subplots(2, 2)
-
-    axs[0, 0].scatter(X_test['temperature'], y_test, label='Измеренная')
-    axs[0, 0].scatter(X_test['temperature'], predictions[:, 0], label='Предсказанная')
-    axs[0, 0].set_title('Максимальная температура')
-    axs[0, 0].legend()
-
-    axs[0, 1].scatter(X_test['humidity'], y_test)
-    axs[0, 1].set_title('Влажность')
-
-    axs[1, 0].scatter(X_test['pressure'], y_test)
-    axs[1, 0].set_title('Давление')
-
-    axs[1, 1].scatter(X_test['wind_speed'], y_test)
-    axs[1, 1].set_title('Скорость ветра')
-
-    plt.show()
-
-def update_weather_data():
-    # Инициализация переменной-счетчика
-    if not hasattr(update_weather_data, "index"):
-        update_weather_data.index = 0
-
-    # Получение следующего города согласно индексу
-    city = cities[update_weather_data.index]
-
-    params = {'APPID': api, 'q': city, 'units': 'metric', 'lang': 'ru'}
-    result = requests.get(url, params=params)
-
-    if result.status_code == 200:
-        data = result.json()
-        if "main" in data and "weather" in data and "wind" in data:
-            temperature = data["main"]["temp"]
-            temperature_min = data["main"]["temp_min"]
-            temperature_max = data["main"]["temp_max"]
-            humidity = data["main"]["humidity"]
-            pressure = data["main"]["pressure"]
-            wind_speed = data["wind"]["speed"]
-            wind_direction = data["wind"]["deg"]
-            description = data["weather"][0]["description"]
-            year = time.localtime().tm_year
-            time_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-            conn.execute("""
-                        INSERT INTO weather VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        """, (
-                city, year, time_str, temperature, temperature_min, temperature_max, humidity, pressure, wind_speed,
-                wind_direction, description))
-            conn.commit()
-            print("Weather data updated successfully for ", city)
-            print(data)
-            check_II()
-        else:
-            print("Error: invalid response from server")
-
-    else:
-        print("Error: failed to fetch weather data for ", city)
-
-    # Увеличение индекса на 1
-    update_weather_data.index = (update_weather_data.index + 1) % len(cities)
+    return model
 
 
-# Функция для создания excel файла с данными погоды
-def create_excel_file():
-    # Запрос данных из таблицы weather
-    df = pd.read_sql_query("SELECT * from weather", conn)
-    # Создание excel файла
-    writer = pd.ExcelWriter('weather_data.xlsx')
-    # Запись данных в excel файл
-    df.to_excel(writer, index=False)
-    writer._save()
-    print("Excel file created successfully")
+# Функция для загрузки модели из файла и предсказания погоды на новых данных
+def predict_weather(file_name, model_file):
+    new_df = pd.read_excel(file_name)
+
+    new_df['Дата'] = pd.to_datetime(new_df['Дата'], format='%Y-%m-%d').dt.strftime('%d.%m.%Y')
+    le = LabelEncoder()
+    le.fit(new_df["Дата"])
+    new_df["Дата"] = le.transform(new_df["Дата"])
+
+    sc = StandardScaler()
+    X_new = new_df.drop(columns=['T'])
+    X_new = sc.fit_transform(X_new)
+
+    model = load_model(model_file)
+    y_pred = model.predict(X_new)
+
+    return y_pred
 
 
-# Создание заданий для выполнения каждую минуту
-schedule.every(5).seconds.do(update_weather_data)
-schedule.every(5).seconds.do(create_excel_file)
+# Обработка данных для обучения модели
+X, y, le, sc = prepare_data("data_many_daya.xlsx")
 
-# Бесконечный цикл для выполнения заданий
-while True:
-    schedule.run_pending()
-    time.sleep(1)
+# Обучение модели и сохранение ее в файл
+# train_model(X, y) # убрать решетку если надо обучить по-новой
 
-# Закрытие соединения с базой данных
-conn.close()
+# Предсказание погоды на новых данных
+y_pred = predict_weather("moscow_weather.xlsx", "weather_model.h5")
+print(y_pred)
 
 
+def graph_plot():
+    df = pd.read_excel("moscow_weather.xlsx")
 
-# Создание заданий для выполнения каждую минуту
-schedule.every(5).seconds.do(update_weather_data)
-schedule.every(5).seconds.do(create_excel_file)
+    # создание графика
+    fig = go.Figure()
 
-# Бесконечный цикл для выполнения заданий
-while True:
-    schedule.run_pending()
-    time.sleep(1)
+    # добавление исходных данных на график
+    fig.add_trace(go.Scatter(x=df["Дата"], y=df["T"], mode="lines", name="Исходные данные"))
 
-# Закрытие соединения с базой данных
-conn.close()
+    # добавление предсказанных значений на график
+    fig.add_trace(go.Scatter(x=df["Дата"], y=y_pred.flatten(), mode="lines", name="Предсказанные значения"))
+
+    # отображение графика
+    fig.show()
+
+graph_plot()
