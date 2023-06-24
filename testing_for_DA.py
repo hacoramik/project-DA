@@ -43,7 +43,9 @@ bot = telebot.TeleBot(TOKEN)
 # Обработчик команды /start
 @bot.message_handler(commands=['start'])
 def start_message(message):
-    bot.send_message(message.chat.id, "Привет! Для того, чтобы узнать функционал - напишите /help. \nЧтобы узнать погоду, введите название города:")
+    bot.send_message(message.chat.id,
+                     "Привет! Для того, чтобы узнать функционал - напишите /help. \nЧтобы узнать погоду, введите название города:")
+
 
 # Добавляем обработчик для кнопки "вернуться к выбору города"
 @bot.message_handler(func=lambda message: message.text == 'Вернуться к выбору города')
@@ -58,6 +60,7 @@ def back_to_city(message):
 
     # Регистрируем обработчик нажатия на кнопки города
     bot.register_next_step_handler(message, choose_city)
+
 
 @bot.message_handler(commands=['help'])
 def help_message(message):
@@ -89,6 +92,7 @@ def choose_city(message):
 
     # Регистрируем обработчик нажатия на кнопки параметра
     bot.register_next_step_handler(message, choose_param)
+
 
 # Обработчик выбора параметра
 def choose_param(message):
@@ -160,21 +164,27 @@ def get_weather(message):
 
         # Получаем данные о погоде для выбранного города и периода
         weather_data = Daily(location, start_date, end_date).fetch()
+        print(weather_data)
+        # Приводим столбец с датой к нужному формату
+        weather_data["time"] = pd.to_datetime(weather_data["time"], format='%Y-%m-%d')
+        weather_data['year'] = weather_data['time'].dt.year
+        weather_data["month"] = weather_data["time"].dt.month
+        weather_data["day"] = weather_data["time"].dt.day
 
         # Отбираем нужный параметр из данных о погоде
         if param == "Температура":
             # Готовим данные для модели
-            forecast_data = data[["date", "tmin", "tmax", "tavg"]].rename(columns={"date": "ds"})
+            forecast_data = weather_data[["time", "tmin", "tmax", "tavg"]].rename(columns={"time": "ds"})
             y_label = "Температура, °C"
 
         elif param == "Осадки":
-            forecast_data = data.rename(columns={"date": "ds",
-                                                 "prcp": "y"})
+            forecast_data = weather_data.rename(columns={"time": "ds",
+                                                         "prcp": "y"})
             y_label = "Осадки, мм"
         elif param == "Давление":
             y_label = "Давление, мм.рт.ст."
-            forecast_data = data.rename(columns={"date": "ds",
-                                                 "pres": "y"})
+            forecast_data = weather_data.rename(columns={"time": "ds",
+                                                         "pres": "y"})
 
         if param == 'Температура':
             # Инициализируем прогнозную модель для tmin
