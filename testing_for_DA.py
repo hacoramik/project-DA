@@ -8,13 +8,9 @@ import plotly.graph_objects as go
 
 # Ваш токен Telegram-бота
 TOKEN = '1628816265:AAGdCGQ5CyipLFU_fdKv8RvXZiq7N4CHQvQ'
-# Название excel файла для анализа
-# EXCEL_FILE_NAME = 'vlad_weather.xlsx'
+
 # Название файла с координатами городов
 COORDINATES_FILE_NAME = 'citiesы.xlsx'
-
-# Читаем данные из Excel-файла
-# data = pd.read_excel(EXCEL_FILE_NAME)
 
 # Читаем файл с координатами городов
 coordinates = pd.read_excel(COORDINATES_FILE_NAME)
@@ -120,37 +116,30 @@ def choose_param(message):
 
 # Обработчик получения погоды
 def get_weather(message):
-    # Получаем выбранный период и сохраняем в глобальную переменную
-    global period
+    # Получаем выбранный период
     period = message.text
 
     if city in cities:
         # Получаем координаты выбранного города
         location = get_location(city)
-        date_str = '01.01.2001'
+        date_str = '01.01.1980'
         date = datetime.strptime(date_str, '%d.%m.%Y')
+        start_date = date_str
 
         # Определяем начальную и конечную даты для выбранного периода
         if period == 'На cегодня':
-            start_date = date_str
             end_date = datetime.now().replace(hour=0, minute=0, second=0) + timedelta(days=1)
         elif period == "На завтра":
-            start_date = date_str
             end_date = datetime.now().replace(hour=0, minute=0, second=0) + timedelta(days=2)
         elif period == "На 3 дня":
-            start_date = date_str
             end_date = datetime.now().replace(hour=0, minute=0, second=0) + timedelta(days=4)
         elif period == "На неделю":
-            start_date = date_str
             end_date = datetime.now().replace(hour=0, minute=0, second=0) + timedelta(days=8)
         elif period == "На месяц":
-            start_date = date_str
             end_date = datetime.now().replace(hour=0, minute=0, second=0) + timedelta(days=32)
         elif period == "На 3 месяца":
-            start_date = date_str
             end_date = datetime.now().replace(hour=0, minute=0, second=0) + timedelta(days=94)
         elif period == "На год":
-            start_date = date_str
             end_date = datetime.now().replace(hour=0, minute=0, second=0) + timedelta(days=366)
         elif period == "Вернуться к выбору города":
             back_to_city(message)
@@ -177,7 +166,7 @@ def get_weather(message):
                                                          "prcp": "y"})
             y_label = "Осадки, мм"
         elif param == "Давление":
-            y_label = "Давление, мм.рт.ст."
+            y_label = "Давление, мм.рт.ст." # сейчаст гПа, надо в мм.рт.ст.
             forecast_data = weather_data.rename(columns={"date": "ds",
                                                          "pres": "y"})
 
@@ -206,7 +195,7 @@ def get_weather(message):
 
         # Получаем даты для прогноза
         if period == "На cегодня":
-            future_dates = pd.date_range(start=datetime.now(), end=end_date, freq='H')
+            future_dates = pd.date_range(start=datetime.now() - timedelta(days=1), end=end_date, freq='0.5H')
         elif period == "На завтра":
             future_dates = pd.date_range(start=datetime.now(), end=end_date, freq='H')
         elif period == "На 3 дня":
