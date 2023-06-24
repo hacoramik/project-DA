@@ -9,18 +9,12 @@ import plotly.graph_objects as go
 # Ваш токен Telegram-бота
 TOKEN = '1628816265:AAGdCGQ5CyipLFU_fdKv8RvXZiq7N4CHQvQ'
 # Название excel файла для анализа
-EXCEL_FILE_NAME = 'vlad_weather.xlsx'
+# EXCEL_FILE_NAME = 'vlad_weather.xlsx'
 # Название файла с координатами городов
 COORDINATES_FILE_NAME = 'citiesы.xlsx'
 
 # Читаем данные из Excel-файла
-data = pd.read_excel(EXCEL_FILE_NAME)
-
-# Приводим столбец с датой к нужному формату
-data["date"] = pd.to_datetime(data["date"], format='%Y-%m-%d')
-data['year'] = data['date'].dt.year
-data["month"] = data["date"].dt.month
-data["day"] = data["date"].dt.day
+# data = pd.read_excel(EXCEL_FILE_NAME)
 
 # Читаем файл с координатами городов
 coordinates = pd.read_excel(COORDINATES_FILE_NAME)
@@ -138,25 +132,25 @@ def get_weather(message):
 
         # Определяем начальную и конечную даты для выбранного периода
         if period == 'На cегодня':
-            start_date = datetime.now().replace(hour=0, minute=0, second=0)
+            start_date = date_str
             end_date = datetime.now().replace(hour=0, minute=0, second=0) + timedelta(days=1)
         elif period == "На завтра":
-            start_date = datetime.now().replace(hour=0, minute=0, second=0) + timedelta(days=1)
+            start_date = date_str
             end_date = datetime.now().replace(hour=0, minute=0, second=0) + timedelta(days=2)
         elif period == "На 3 дня":
-            start_date = datetime.now().replace(hour=0, minute=0, second=0) + timedelta(days=1)
+            start_date = date_str
             end_date = datetime.now().replace(hour=0, minute=0, second=0) + timedelta(days=4)
         elif period == "На неделю":
-            start_date = datetime.now().replace(hour=0, minute=0, second=0) + timedelta(days=1)
+            start_date = date_str
             end_date = datetime.now().replace(hour=0, minute=0, second=0) + timedelta(days=8)
         elif period == "На месяц":
-            start_date = datetime.now().replace(hour=0, minute=0, second=0) + timedelta(days=1)
+            start_date = date_str
             end_date = datetime.now().replace(hour=0, minute=0, second=0) + timedelta(days=32)
         elif period == "На 3 месяца":
-            start_date = datetime.now().replace(hour=0, minute=0, second=0) + timedelta(days=1)
+            start_date = date_str
             end_date = datetime.now().replace(hour=0, minute=0, second=0) + timedelta(days=94)
         elif period == "На год":
-            start_date = datetime.now().replace(hour=0, minute=0, second=0) + timedelta(days=1)
+            start_date = date_str
             end_date = datetime.now().replace(hour=0, minute=0, second=0) + timedelta(days=366)
         elif period == "Вернуться к выбору города":
             back_to_city(message)
@@ -165,25 +159,26 @@ def get_weather(message):
         # Получаем данные о погоде для выбранного города и периода
         weather_data = Daily(location, start_date, end_date).fetch()
         print(weather_data)
+        weather_data['date'] = weather_data.index.strftime('%Y-%m-%d')
         # Приводим столбец с датой к нужному формату
-        weather_data["time"] = pd.to_datetime(weather_data["time"], format='%Y-%m-%d')
-        weather_data['year'] = weather_data['time'].dt.year
-        weather_data["month"] = weather_data["time"].dt.month
-        weather_data["day"] = weather_data["time"].dt.day
+        weather_data["date"] = pd.to_datetime(weather_data["date"], format='%Y-%m-%d')
+        weather_data['year'] = weather_data['date'].dt.year
+        weather_data["month"] = weather_data["date"].dt.month
+        weather_data["day"] = weather_data["date"].dt.day
 
         # Отбираем нужный параметр из данных о погоде
         if param == "Температура":
             # Готовим данные для модели
-            forecast_data = weather_data[["time", "tmin", "tmax", "tavg"]].rename(columns={"time": "ds"})
+            forecast_data = weather_data[["date", "tmin", "tmax", "tavg"]].rename(columns={"date": "ds"})
             y_label = "Температура, °C"
 
         elif param == "Осадки":
-            forecast_data = weather_data.rename(columns={"time": "ds",
+            forecast_data = weather_data.rename(columns={"date": "ds",
                                                          "prcp": "y"})
             y_label = "Осадки, мм"
         elif param == "Давление":
             y_label = "Давление, мм.рт.ст."
-            forecast_data = weather_data.rename(columns={"time": "ds",
+            forecast_data = weather_data.rename(columns={"date": "ds",
                                                          "pres": "y"})
 
         if param == 'Температура':
@@ -246,7 +241,7 @@ def get_weather(message):
             fig.add_trace(go.Scatter(x=future_dates, y=future_tavg['yhat'], name='Прогноз средней температуры'))
 
             fig.update_layout(title=f"{param} в {city} {period}", xaxis_title="Дата", yaxis_title=y_label)
-            fig.update_xaxes(range=[datetime.now(), end_date])
+            fig.update_xaxes(range=[datetime.now() - timedelta(days=1), end_date])
             bot.send_photo(chat_id=message.chat.id, photo=fig.to_image(format='png'))  # Отправляем график пользователю
             keyboard = types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=True)
             button = types.KeyboardButton(text="Вернуться к выбору города")
@@ -264,7 +259,7 @@ def get_weather(message):
             # fig.add_trace(go.Scatter(x=weather_data.index, y=parameter.values, name='Исторические данные'))
             fig.add_trace(go.Scatter(x=future_dates, y=future['yhat'], name='Прогноз'))
             fig.update_layout(title=f"{param} в {city} {period}", xaxis_title="Дата", yaxis_title=y_label)
-            fig.update_xaxes(range=[datetime.now(), end_date])
+            fig.update_xaxes(range=[datetime.now() - timedelta(days=1), end_date])
             bot.send_photo(chat_id=message.chat.id, photo=fig.to_image(format='png'))  # Отправляем график пользователю
             keyboard = types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=True)
             button = types.KeyboardButton(text="Вернуться к выбору города")
