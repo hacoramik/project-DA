@@ -34,7 +34,8 @@ bot = telebot.TeleBot(TOKEN)
 @bot.message_handler(commands=['start'])
 def start_message(message):
     bot.send_message(message.chat.id,
-                     "Привет! Для того, чтобы узнать функционал - напишите /help. \nЧтобы узнать погоду, введите название города:")
+                     "Привет! Для того, чтобы узнать функционал - напишите /help. "
+                     "\nЧтобы узнать погоду, введите название города:")
 
 
 # Добавляем обработчик для кнопки "вернуться к выбору города"
@@ -123,7 +124,6 @@ def get_weather(message):
         # Получаем координаты выбранного города
         location = get_location(city)
         date_str = '01.01.1980'
-        date = datetime.strptime(date_str, '%d.%m.%Y')
         start_date = date_str
 
         # Определяем начальную и конечную даты для выбранного периода
@@ -147,7 +147,7 @@ def get_weather(message):
 
         # Получаем данные о погоде для выбранного города и периода
         weather_data = Daily(location, start_date, end_date).fetch()
-        print(weather_data)
+        print(weather_data)                                         # Нужно для проверки фрейма
         weather_data['date'] = weather_data.index.strftime('%Y-%m-%d')
         # Приводим столбец с датой к нужному формату
         weather_data["date"] = pd.to_datetime(weather_data["date"], format='%Y-%m-%d')
@@ -195,19 +195,19 @@ def get_weather(message):
 
         # Получаем даты для прогноза
         if period == "На cегодня":
-            future_dates = pd.date_range(start=datetime.now() - timedelta(days=1), end=end_date, freq='0.5H')
+            future_dates = pd.date_range(start=datetime.now() - timedelta(days=1), end=end_date, freq='H')
         elif period == "На завтра":
-            future_dates = pd.date_range(start=datetime.now(), end=end_date, freq='H')
+            future_dates = pd.date_range(start=datetime.now() - timedelta(days=1), end=end_date, freq='H')
         elif period == "На 3 дня":
-            future_dates = pd.date_range(start=datetime.now(), end=end_date, freq='H')
+            future_dates = pd.date_range(start=datetime.now() - timedelta(days=1), end=end_date, freq='H')
         elif period == "На неделю":
-            future_dates = pd.date_range(start=datetime.now(), end=end_date, freq='H')
+            future_dates = pd.date_range(start=datetime.now() - timedelta(days=1), end=end_date, freq='H')
         elif period == "На месяц":
-            future_dates = pd.date_range(start=datetime.now(), end=end_date, freq='D')
+            future_dates = pd.date_range(start=datetime.now() - timedelta(days=1), end=end_date, freq='D')
         elif period == "На 3 месяца":
-            future_dates = pd.date_range(start=datetime.now(), end=end_date, freq='D')
+            future_dates = pd.date_range(start=datetime.now() - timedelta(days=1), end=end_date, freq='D')
         elif period == "На год":
-            future_dates = pd.date_range(start=datetime.now(), end=end_date, freq='D')
+            future_dates = pd.date_range(start=datetime.now() - timedelta(days=1), end=end_date, freq='D')
         elif period == "Вернуться к выбору города":
             back_to_city(message)
             return
@@ -242,7 +242,6 @@ def get_weather(message):
         else:
             # Получаем прогноз
             future = model.predict(pd.DataFrame({"ds": future_dates}))
-            print('Complete for User')
             # Рисуем график с историческими данными и прогнозом
             fig = go.Figure()
             # fig.add_trace(go.Scatter(x=weather_data.index, y=parameter.values, name='Исторические данные'))
@@ -254,7 +253,7 @@ def get_weather(message):
             button = types.KeyboardButton(text="Вернуться к выбору города")
             keyboard.add(button)
             bot.send_message(chat_id=message.chat.id, text='Можете ввести город снова', reply_markup=keyboard)
-
+        print('~~~~~~~~~Complete for User~~~~~~~~~~~')
 
     else:
         bot.send_message(message.chat.id, "Некорректный ввод. Введите название города заново:")
