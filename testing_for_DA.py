@@ -199,6 +199,11 @@ def get_weather(message):
         fig.update_layout(title=f"{param} в {city} {period}", xaxis_title="Дата", yaxis_title=y_label)
         fig.update_xaxes(range=[datetime.now(), end_date])
         bot.send_photo(chat_id=message.chat.id, photo=fig.to_image(format='png'))  # Отправляем график пользователю
+        keyboard = types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=True)
+        button = types.KeyboardButton(text="Вернуться к выбору города")
+        keyboard.add(button)
+        bot.send_message(chat_id=message.chat.id, text='Можете ввести город снова', reply_markup=keyboard)
+
 
     else:
         bot.send_message(message.chat.id, "Некорректный ввод. Введите название города заново:")
