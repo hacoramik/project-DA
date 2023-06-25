@@ -7,7 +7,7 @@ from prophet import Prophet  # модель для прогнозировани�
 import plotly.graph_objects as go
 
 # Ваш токен Telegram-бота
-TOKEN = '1628816265:AAGdCGQ5CyipLFU_fdKv8RvXZiq7N4CHQvQ'
+TOKEN = ''
 
 # Название файла с координатами городов
 COORDINATES_FILE_NAME = 'citiesы.xlsx'
